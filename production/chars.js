@@ -38,7 +38,7 @@ function phone(x, y, w, h, screen, rot = 0) {
 
 // ---------------- RAFI (FIXIBLE IT technician) ----------------
 function rafi(o = {}) {
-  const skin = SKIN.rafi, polo = BRAND.teal, jeans = '#22304A';
+  const skin = SKIN.rafi, U = o.uniform || {}, polo = U.polo || BRAND.teal, collar = U.collar || BRAND.navy, jeans = '#22304A';
   let s = EF(0, 2, 92, 12, '#000', 'opacity="0.13"');
   const step = o.step || 0; // walk cycle phase (0 = still)
   const lk = Math.sin(step) * 10, rk = -lk;
@@ -50,11 +50,12 @@ function rafi(o = {}) {
   up += P('M-13 -332 L13 -332 L14 -292 L-14 -292 Z', skin);
   up += P('M-46 -300 Q-68 -298 -70 -276 L-58 -164 Q0 -158 58 -164 L70 -276 Q68 -298 46 -300 Q0 -290 -46 -300 Z', polo);
   up += F('M38 -296 Q62 -296 64 -276 L54 -166 Q44 -164 40 -164 Z', shade(polo));
-  up += P('M-26 -302 L0 -286 L-10 -266 L-30 -290 Z', BRAND.navy) + P('M26 -302 L0 -286 L10 -266 L30 -290 Z', BRAND.navy);
+  up += P('M-26 -302 L0 -286 L-10 -266 L-30 -290 Z', collar) + P('M26 -302 L0 -286 L10 -266 L30 -290 Z', collar);
   up += L('M0 -284 L0 -240', 4) + E(0, -268, 3, 3, PAL.white) + E(0, -252, 3, 3, PAL.white);
   // small chest mark (white roundel + teal tick) — subtle, not an oversized logo
-  up += E(-32, -258, 11, 11, PAL.white, 'stroke-width="3.5"') + L('M-38 -258 L-33 -253 L-25 -263', 3.5, polo);
-  up += L('M-14 -292 L16 -232 M14 -292 L18 -232', 4, BRAND.navy);
+  if (U.badge === 'flame') up += E(-32, -258, 11, 11, polo, 'stroke-width="3.5"') + P('M-32 -266 Q-24 -258 -28 -251 Q-32 -248 -36 -251 Q-40 -258 -32 -266 Z', collar, 'stroke-width="2"');
+  else up += E(-32, -258, 11, 11, PAL.white, 'stroke-width="3.5"') + L('M-38 -258 L-33 -253 L-25 -263', 3.5, polo);
+  up += L('M-14 -292 L16 -232 M14 -292 L18 -232', 4, U.lanyard || BRAND.navy);
   up += P('M6 -232 L32 -232 L32 -196 L6 -196 Z', PAL.white) + F('M8.5 -229.5 L29.5 -229.5 L29.5 -222 L8.5 -222 Z', polo) + E(19, -212, 5, 5, skin, 'stroke-width="2.5"') + L('M11 -201 L27 -201', 2.5);
   up += L('M-52 -168 Q0 -162 52 -168', 4);
   const SLv = { sleeve: polo, skin };

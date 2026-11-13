@@ -8,7 +8,7 @@ const HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
 @font-face{font-family:'Hind Siliguri';src:url(/font.ttf) format('truetype');font-weight:700}
 html,body{margin:0;background:#000;overflow:hidden} svg text{font-family:'Hind Siliguri';font-weight:700}
 </style></head><body><div id="c"></div><img id="pre" src="/logo.png" style="position:absolute;left:-9999px"><span style="font-family:'Hind Siliguri';position:absolute;left:-9999px">বাংলা FIXIBLE</span></body></html>`;
-async function openPages(n, W, H) {
+async function openPages(n, W, H, extra = {}) {
   const browser = await chromium.launch();
   const pages = [];
   for (let i = 0; i < n; i++) {
@@ -17,6 +17,7 @@ async function openPages(n, W, H) {
       const u = r.request().url();
       if (u.endsWith('/font.ttf')) return r.fulfill({ body: FONT, contentType: 'font/ttf' });
       if (u.endsWith('/logo.png')) return r.fulfill({ body: LOGO, contentType: 'image/png' });
+      for (const k in extra) if (u.endsWith(k)) return r.fulfill({ body: extra[k].body, contentType: extra[k].type });
       return r.fulfill({ body: HTML, contentType: 'text/html' });
     });
     await p.goto('http://render.local/');
