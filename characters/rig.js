@@ -79,6 +79,7 @@ function face(o) {
   // eyes
   const eye = (x, side) => {
     const lx = x + look[0], ly = ey + look[1];
+    if (o.blink) return L(`M${x - 7} ${ey + 1} Q${x} ${ey + 5} ${x + 7} ${ey + 1}`, 4.5);
     if (expr === 'happy') return L(`M${x - 8} ${ey + 3} Q${x} ${ey - 9} ${x + 8} ${ey + 3}`, 4.5);
     const big = expr === 'surprised' ? 1.25 : 1;
     let e = EF(lx, ly, 5.6 * big, 7.6 * big, INK) + EF(lx + 1.8, ly - 2.6, 1.9, 1.9, '#fff');
@@ -172,8 +173,10 @@ function head(o) {
   const { cx, cy, rx, ry, skin } = o;
   let s = '';
   if (o.hairBack) s += o.hairBack;
-  s += E(cx - rx + 1, cy + 4, 9, 12, skin) + E(cx + rx - 1, cy + 4, 9, 12, skin);
-  s += L(`M${cx - rx + 2} ${cy} q-4 4 0 8`, 3, shade(skin, 0.7)) + L(`M${cx + rx - 2} ${cy} q4 4 0 8`, 3, shade(skin, 0.7));
+  if (!o.noEars) {
+    s += E(cx - rx + 1, cy + 4, 9, 12, skin) + E(cx + rx - 1, cy + 4, 9, 12, skin);
+    s += L(`M${cx - rx + 2} ${cy} q-4 4 0 8`, 3, shade(skin, 0.7)) + L(`M${cx + rx - 2} ${cy} q4 4 0 8`, 3, shade(skin, 0.7));
+  }
   s += E(cx, cy, rx, ry, skin);
   // one shade tone along the jaw
   s += F(`M${cx - rx * 0.7} ${cy + ry * 0.62} Q${cx} ${cy + ry * 1.08} ${cx + rx * 0.7} ${cy + ry * 0.62} Q${cx} ${cy + ry * 0.92} ${cx - rx * 0.7} ${cy + ry * 0.62} Z`, shade(skin, 0.9));
@@ -205,7 +208,7 @@ function rafiHead(o = {}) {
     // side-swept fringe lock
     P(`M${cx + 14} ${cy - ry * 0.62} Q${cx - 8} ${cy - ry * 0.5} ${cx - 26} ${cy - ry * 0.2} Q${cx - 16} ${cy - ry * 0.52} ${cx - 2} ${cy - ry * 0.7} Z`, INK) +
     hairShine([`M${cx - 30} ${cy - ry * 0.82} q12 -10 26 -8`, `M${cx + 14} ${cy - ry * 0.9} q10 -2 18 4`]);
-  return head({ cx, cy, rx, ry, skin, expr: o.expr, mouth: o.mouth, look: o.look, hairFront });
+  return head({ cx, cy, rx, ry, skin, expr: o.expr, mouth: o.mouth, look: o.look, blink: o.blink, hairFront });
 }
 function rafi(o = {}) {
   const skin = SKIN.rafi, teal = PAL.teal, jeans = '#2E3A5C';
@@ -259,7 +262,7 @@ function karimHead(o = {}) {
     L(`M${cx - rx - 2} ${cy - 14} q4 -10 10 -14 M${cx + rx + 2} ${cy - 14} q-4 -10 -10 -14`, 3, '#8C8A96') +
     EF(cx + 14, cy - ry + 22, 10, 5, '#ffffff', 'opacity="0.35"');
   const lines = L(`M${cx - 18} ${cy - ry * 0.45} q18 -5 36 0`, 2.5, shade(skin, 0.7));
-  return head({ cx, cy, rx, ry, skin, expr: o.expr, mouth: o.mouth, look: o.look, hairBack, hairFront, mustache: '#25222B', browW: 7, lines });
+  return head({ cx, cy, rx, ry, skin, expr: o.expr, mouth: o.mouth, look: o.look, blink: o.blink, hairBack, hairFront, mustache: '#25222B', browW: 7, lines });
 }
 function karim(o = {}) {
   const skin = SKIN.karim;
@@ -299,17 +302,15 @@ function karim(o = {}) {
 
 // 3) NASIMA APA — mother, home user (35), salwar-kameez + orna, side bun
 function nasimaHead(o = {}) {
+  // Modest Muslim look: marigold hijab (matches her orna), no bindi, no visible bun.
   const cx = o.cx ?? 0, cy = o.cy ?? -364, rx = 48, ry = 52, skin = SKIN.nasima;
-  const hairCol = '#231F2A';
-  const hairBack = E(cx + rx + 8, cy - ry * 0.55, 26, 24, hairCol) + L(`M${cx + rx - 6} ${cy - ry * 0.5} q14 -16 28 -6`, 3.5, '#4B4A5C') +
-    // marigold flower in bun
-    [0, 72, 144, 216, 288].map(a => E(cx + rx + 26 + 9 * Math.cos(a * Math.PI / 180), cy - ry * 0.88 + 9 * Math.sin(a * Math.PI / 180), 6, 6, PAL.mari, 'stroke-width="3"')).join('') + E(cx + rx + 26, cy - ry * 0.88, 4, 4, PAL.terra, 'stroke-width="2.5"') +
-    P(`M${cx - rx - 8} ${cy + 18} Q${cx - rx - 14} ${cy - 20} ${cx - rx} ${cy - 30} L${cx + rx} ${cy - 30} Q${cx + rx + 14} ${cy - 20} ${cx + rx + 8} ${cy + 18} Z`, hairCol);
-  const hairFront = hairCap(cx, cy, rx, ry, { pad: 7, amp: 0, bumps: 1, line: 0.32, scallops: 2, dip: 14, part: 0, side: 0.3, a0: 165, a1: 375 }) +
-    L(`M${cx} ${cy - ry - 7} L${cx + 2} ${cy - ry * 0.38}`, 3, '#4B4A5C') + hairShine([`M${cx - 30} ${cy - ry * 0.78} q10 -12 24 -14`]);
-  const extra = E(cx - rx + 1, cy + 22, 4.5, 4.5, PAL.mari, 'stroke-width="2.5"') + E(cx + rx - 1, cy + 22, 4.5, 4.5, PAL.mari, 'stroke-width="2.5"') +
-    EF(cx, cy - ry * 0.3, 3, 3, PAL.red);
-  return head({ cx, cy, rx, ry, skin, expr: o.expr, mouth: o.mouth, look: o.look, hairBack, hairFront, extra });
+  const hij = '#E9DCCB', hijS = shade('#E9DCCB', 0.86);
+  const hairBack = P(`M${cx - rx - 12} ${cy + 4} Q${cx - rx - 16} ${cy - ry - 14} ${cx} ${cy - ry - 14} Q${cx + rx + 16} ${cy - ry - 14} ${cx + rx + 12} ${cy + 4} Q${cx + rx + 14} ${cy + ry + 14} ${cx + 22} ${cy + ry + 28} Q${cx} ${cy + ry + 34} ${cx - 22} ${cy + ry + 28} Q${cx - rx - 14} ${cy + ry + 14} ${cx - rx - 12} ${cy + 4} Z`, hij) +
+    F(`M${cx + rx + 2} ${cy + 10} Q${cx + rx + 8} ${cy + ry + 10} ${cx + 18} ${cy + ry + 24} Q${cx + 34} ${cy + ry + 6} ${cx + rx + 2} ${cy + 10} Z`, hijS);
+  const hairFront = P(`M${cx - rx * 0.97} ${cy + ry * 0.42} Q${cx - rx - 10} ${cy - ry * 0.4} ${cx - rx * 0.55} ${cy - ry - 6} Q${cx} ${cy - ry - 16} ${cx + rx * 0.55} ${cy - ry - 6} Q${cx + rx + 10} ${cy - ry * 0.4} ${cx + rx * 0.97} ${cy + ry * 0.42} Q${cx + rx * 0.86} ${cy - ry * 0.24} ${cx + rx * 0.5} ${cy - ry * 0.46} Q${cx} ${cy - ry * 0.62} ${cx - rx * 0.5} ${cy - ry * 0.46} Q${cx - rx * 0.86} ${cy - ry * 0.24} ${cx - rx * 0.97} ${cy + ry * 0.42} Z`, hij) +
+    L(`M${cx - rx * 0.5} ${cy - ry * 0.78} Q${cx} ${cy - ry * 0.98} ${cx + rx * 0.5} ${cy - ry * 0.78}`, 3, hijS) +
+    E(cx + rx * 0.9, cy + ry * 0.62, 4.5, 4.5, '#C9A86A', 'stroke-width="2.5"');
+  return head({ cx, cy, rx, ry, skin, expr: o.expr, mouth: o.mouth, look: o.look, blink: o.blink, hairBack, hairFront, noEars: true });
 }
 function nasima(o = {}) {
   const skin = SKIN.nasima, kameez = PAL.red, salwar = PAL.jute;
@@ -352,7 +353,10 @@ function daduHead(o = {}) {
   const beard = P(`M${cx - rx * 0.78} ${cy + ry * 0.35} Q${cx - rx * 0.66} ${cy + ry * 1.12} ${cx} ${cy + ry * 1.14} Q${cx + rx * 0.66} ${cy + ry * 1.12} ${cx + rx * 0.78} ${cy + ry * 0.35} Q${cx + rx * 0.5} ${cy + ry * 0.78} ${cx} ${cy + ry * 0.78} Q${cx - rx * 0.5} ${cy + ry * 0.78} ${cx - rx * 0.78} ${cy + ry * 0.35} Z`, white);
   const lines = L(`M${cx - 18} ${cy - ry * 0.42} q18 -5 36 0`, 2.5, shade(skin, 0.7)) +
     L(`M${cx - rx * 0.62} ${cy + ry * 0.2} q-4 8 2 14 M${cx + rx * 0.62} ${cy + ry * 0.2} q4 8 -2 14`, 2.5, shade(skin, 0.7));
-  return head({ cx, cy, rx, ry, skin, expr: o.expr, mouth: o.mouth, look: o.look, hairFront, beard, mustache: white, glasses: '#3A2A22', browCol: '#D8D4CC', browW: 6, lines });
+  const tupi = P(`M${cx - rx * 0.88} ${cy - ry * 0.5} Q${cx - rx * 0.92} ${cy - ry * 1.24} ${cx} ${cy - ry * 1.26} Q${cx + rx * 0.92} ${cy - ry * 1.24} ${cx + rx * 0.88} ${cy - ry * 0.5} Q${cx} ${cy - ry * 0.64} ${cx - rx * 0.88} ${cy - ry * 0.5} Z`, '#FBF8F1') +
+    L(`M${cx - rx * 0.84} ${cy - ry * 0.66} Q${cx} ${cy - ry * 0.8} ${cx + rx * 0.84} ${cy - ry * 0.66}`, 3, '#CFC8BA') +
+    [-0.5, -0.25, 0, 0.25, 0.5].map(k => EF(cx + rx * k, cy - ry * (0.98 - Math.abs(k) * 0.2), 2.6, 2.6, '#CFC8BA')).join('');
+  return head({ cx, cy, rx, ry, skin, expr: o.expr, mouth: o.mouth, look: o.look, blink: o.blink, hairFront: hairFront + tupi, beard, mustache: white, glasses: '#3A2A22', browCol: '#D8D4CC', browW: 6, lines });
 }
 function dadu(o = {}) {
   const skin = SKIN.dadu, panj = PAL.white;
@@ -390,7 +394,7 @@ function tutulHead(o = {}) {
     // short bangs
     P(`M${cx - rx * 0.62} ${cy - ry * 0.3} Q${cx - 20} ${cy - ry * 0.05} ${cx - 6} ${cy - ry * 0.34} Q${cx + 10} ${cy - ry * 0.06} ${cx + 22} ${cy - ry * 0.34} Q${cx + 34} ${cy - ry * 0.12} ${cx + rx * 0.66} ${cy - ry * 0.3} L${cx + rx * 0.5} ${cy - ry * 0.6} L${cx - rx * 0.5} ${cy - ry * 0.6} Z`, hc) +
     hairShine([`M${cx - 30} ${cy - ry * 0.82} q10 -10 22 -12`]);
-  return head({ cx, cy, rx, ry, skin, expr: o.expr, mouth: o.mouth, look: o.look, hairBack, hairFront });
+  return head({ cx, cy, rx, ry, skin, expr: o.expr, mouth: o.mouth, look: o.look, blink: o.blink, hairBack, hairFront });
 }
 function tutul(o = {}) {
   const skin = SKIN.tutul, frock = '#3B6EA8';
@@ -423,9 +427,9 @@ function tutul(o = {}) {
 const CAST = [
   { id: 'rafi', fn: rafi, head: rafiHead, bn: 'রাফি', en: 'Rafi — FIXIBLE IT Technician', mark: 'Teal polo, ID card, toolbox' },
   { id: 'karim', fn: karim, head: karimHead, bn: 'করিম ভাই', en: 'Karim Bhai — Shop Owner', mark: 'Moustache, checked lungi, khata' },
-  { id: 'nasima', fn: nasima, head: nasimaHead, bn: 'নাসিমা আপা', en: 'Nasima Apa — Home User', mark: 'Red kameez, marigold orna, bun' },
-  { id: 'dadu', fn: dadu, head: daduHead, bn: 'দাদু', en: 'Dadu — Grandfather', mark: 'Silver hair, square glasses, teal shawl' },
+  { id: 'nasima', fn: nasima, head: nasimaHead, bn: 'নাসিমা আপা', en: 'Nasima Apa — Home User', mark: 'Red kameez, marigold hijab & orna' },
+  { id: 'dadu', fn: dadu, head: daduHead, bn: 'দাদু', en: 'Dadu — Grandfather', mark: 'White tupi, square glasses, teal shawl' },
   { id: 'tutul', fn: tutul, head: tutulHead, bn: 'টুটুল', en: 'Tutul — Student', mark: 'Two braids, red ribbons, backpack' },
 ];
 
-module.exports = { PAL, INK, SW, shade, P, L, E, EF, F, G, tube, hand, head, face, CAST, rafiHead };
+module.exports = { PAL, INK, SW, SKIN, shade, P, L, E, EF, F, G, tube, hand, handOpen, shoe, sandal, head, face, hairCap, hairShine, CAST, rafiHead, karimHead, nasimaHead, daduHead, tutulHead };
