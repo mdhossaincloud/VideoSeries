@@ -1,0 +1,60 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:Hind;font-weight:500;src:url(../03_Assets/fonts/hind-siliguri-bengali-500-normal.woff2);unicode-range:U+0951-0952,U+0964-0965,U+0980-09FE,U+1CD0-1CF9,U+200C-200D,U+20B9,U+25CC,U+A8F1}
+@font-face{font-family:Hind;font-weight:600;src:url(../03_Assets/fonts/hind-siliguri-bengali-600-normal.woff2);unicode-range:U+0951-0952,U+0964-0965,U+0980-09FE,U+1CD0-1CF9,U+200C-200D,U+20B9,U+25CC,U+A8F1}
+@font-face{font-family:Hind;font-weight:700;src:url(../03_Assets/fonts/hind-siliguri-bengali-700-normal.woff2);unicode-range:U+0951-0952,U+0964-0965,U+0980-09FE,U+1CD0-1CF9,U+200C-200D,U+20B9,U+25CC,U+A8F1}
+@font-face{font-family:Hind;font-weight:500;src:url(../03_Assets/fonts/poppins-latin-500-normal.woff2);unicode-range:U+0000-00FF}
+@font-face{font-family:Hind;font-weight:600;src:url(../03_Assets/fonts/poppins-latin-600-normal.woff2);unicode-range:U+0000-00FF}
+@font-face{font-family:Hind;font-weight:700;src:url(../03_Assets/fonts/poppins-latin-700-normal.woff2);unicode-range:U+0000-00FF}
+@font-face{font-family:Pop;font-weight:500;src:url(../03_Assets/fonts/poppins-latin-500-normal.woff2)}
+@font-face{font-family:Pop;font-weight:700;src:url(../03_Assets/fonts/poppins-latin-700-normal.woff2)}
+:root{--teal:#0CAEA9;--hi:#1FD6C8;--navy:#052E3B;--light:#F1FAFA}
+html,body{margin:0;width:1080px;height:1920px;overflow:hidden;background:#021a22}
+#stage{position:absolute;inset:0;overflow:hidden;background:radial-gradient(120% 70% at 50% 42%,#0a3d4c 0%,var(--navy) 45%,#021821 100%)}
+#plate{position:absolute;left:0;top:-330px;width:1080px;height:1920px;background:url(../05_Scene_Renders/plates/S06_product.png) center/cover;mix-blend-mode:screen;opacity:.95;-webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 66%,transparent 81%)}
+#glow{position:absolute;left:50%;top:880px;width:900px;height:900px;margin-left:-450px;margin-top:-450px;border-radius:50%;background:radial-gradient(circle,rgba(31,214,200,.22),rgba(31,214,200,0) 60%)}
+#led{position:absolute;width:26px;height:26px;border-radius:50%;left:339px;top:1001px;background:radial-gradient(circle,rgba(255,60,50,.95),rgba(255,30,30,0) 70%)}
+#logoWrap{position:absolute;left:50%;top:110px;width:430px;margin-left:-215px}
+#logo{width:100%;display:block}
+#sweep{position:absolute;inset:0;-webkit-mask:url(fixible-it-logo-reversed-trimmed.png) center/contain no-repeat;mask:url(fixible-it-logo-reversed-trimmed.png) center/contain no-repeat;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.9) 50%,transparent 65%);background-size:300% 100%}
+.t{position:absolute;left:0;right:0;text-align:center;color:var(--light)}
+#slogan{top:540px;font-family:Pop;font-weight:500;font-size:40px;letter-spacing:2px;color:var(--hi)}
+#rule{position:absolute;left:50%;top:612px;height:3px;width:220px;margin-left:-110px;background:linear-gradient(90deg,transparent,var(--teal),transparent)}
+#q{top:1118px;font-family:Hind;font-weight:600;font-size:54px;line-height:1.38;padding:0 70px;text-shadow:0 4px 24px rgba(0,0,0,.6)}
+#cta{position:absolute;left:50%;top:1290px;transform:translateX(-50%);white-space:nowrap;font-family:Hind;font-weight:700;font-size:58px;color:#03222c;background:linear-gradient(90deg,var(--teal),var(--hi));padding:14px 54px 6px;border-radius:999px;box-shadow:0 10px 40px rgba(12,174,169,.45)}
+#web{top:1438px;font-family:Pop;font-weight:700;font-size:64px;letter-spacing:6px;color:#fff}
+#web span{color:var(--hi)}
+#vig{position:absolute;inset:0;background:radial-gradient(110% 80% at 50% 45%,transparent 55%,rgba(0,0,0,.55))}
+#flash{position:absolute;inset:0;background:var(--hi)}
+</style></head>
+<body><div id="stage">
+<div id="plate"></div><div id="glow"></div><div id="led"></div>
+<div id="logoWrap"><img id="logo" src="fixible-it-logo-reversed-trimmed.png"><div id="sweep"></div></div>
+<div id="slogan" class="t">Your Technology Partner.</div><div id="rule"></div>
+<div id="q" class="t">আপনার দোকান কিংবা বাসার নিরাপত্তায় CCTV প্রয়োজন?</div>
+<div id="cta">কনসাল্ট নিন FIXIBLE IT থেকে ।</div>
+<div id="web" class="t">FIXIBLEIT<span>.</span>COM</div>
+<div id="vig"></div><div id="flash"></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const cl=(x)=>Math.max(0,Math.min(1,x));
+const ease=x=>1-Math.pow(1-cl(x),3);
+const seg=(t,a,b)=>ease((t-a)/(b-a));
+function rise(el,t,a,d=.6,dy=40,extra=''){const p=seg(t,a,a+d);el.style.opacity=p;el.style.transform=`translateY(${(1-p)*dy}px) ${extra}`;el.style.filter=`blur(${(1-p)*8}px)`}
+window.setT=function(t){
+  $('stage').style.transform=`scale(${1.035-0.035*Math.min(t/8.8,1)})`; $('glow').style.transform=`translate(${Math.sin(t*.7)*40}px,${Math.cos(t*.5)*30}px)`;
+  $('flash').style.opacity=Math.max(0,.55-t*1.6);
+  const pp=seg(t,0,1.6); $('plate').style.transform=`translateY(${(1-pp)*60}px) scale(${1.06-pp*.06+t*.004})`; $('plate').style.opacity=.95*seg(t,0,.9);
+  $('glow').style.opacity=.6+.4*Math.sin(t*2.2);
+  $('led').style.opacity=t<0.8?0:(.55+.45*Math.sin(t*6.3));
+  const lp=seg(t,.05,.95); const lw=$('logoWrap'); lw.style.opacity=lp; lw.style.transform=`scale(${.9+.1*lp})`; lw.style.filter=`blur(${(1-lp)*10}px)`;
+  const s=cl((t-1.0)/.9); $('sweep').style.backgroundPosition=`${(1-s)*150}% 0`; $('sweep').style.opacity=(s>0&&s<1)?1:0;
+  rise($('slogan'),t,.6,.6,24); const r=seg(t,.8,1.4); $('rule').style.transform=`scaleX(${r})`; $('rule').style.opacity=r;
+  rise($('q'),t,.9,.6,40);
+  const c=seg(t,3.9,4.45); const cta=$('cta'); cta.style.opacity=c; cta.style.transform=`translateX(-50%) scale(${.85+.15*c+ (t>4.6? .015*Math.sin((t-4.6)*4):0)})`;
+  rise($('web'),t,5.2,.55,30);
+};
+window.setT(0);
+</script></body></html>

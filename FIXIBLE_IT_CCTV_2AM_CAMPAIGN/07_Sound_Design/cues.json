@@ -1,0 +1,14 @@
+{"duration": 26.6, "tension_end": 15.4, "brand_music_start": 15.2,
+ "sfx": [
+  {"type":"footstep","t":3.20,"gain":0.22,"pan":0.2},{"type":"footstep","t":3.75,"gain":0.26,"pan":-0.1},
+  {"type":"footstep","t":4.30,"gain":0.32,"pan":0.15},{"type":"footstep","t":4.85,"gain":0.36,"pan":-0.1},
+  {"type":"footstep","t":5.40,"gain":0.40,"pan":0.1},{"type":"footstep","t":5.95,"gain":0.40,"pan":-0.05},
+  {"type":"heartbeat","t":6.30,"gain":0.55},{"type":"heartbeat","t":6.95,"gain":0.6},{"type":"heartbeat","t":7.55,"gain":0.65},
+  {"type":"riser","t":7.90,"dur":1.35,"gain":0.40},
+  {"type":"impact","t":9.25,"gain":0.85},
+  {"type":"surveil","t":10.15,"gain":0.30,"pan":0.3},
+  {"type":"bass_hit","t":11.85,"gain":0.75},
+  {"type":"beep","t":12.95,"gain":0.22},{"type":"beep","t":13.95,"gain":0.18},
+  {"type":"whoosh","t":14.35,"gain":0.28},{"type":"whoosh","t":17.62,"gain":0.32},
+  {"type":"shimmer","t":17.85,"gain":0.28},{"type":"shimmer","t":22.05,"gain":0.18},{"type":"shimmer","t":24.45,"gain":0.18}
+ ]}
