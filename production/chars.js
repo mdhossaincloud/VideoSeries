@@ -144,11 +144,17 @@ function dadu(o = {}) {
   up += P('M-8 -282 L8 -282 L8 -226 L-8 -226 Z', panj) + E(0, -268, 2.8, 2.8, PAL.mari) + E(0, -254, 2.8, 2.8, PAL.mari) + E(0, -240, 2.8, 2.8, PAL.mari);
   up += P('M-14 -290 L0 -280 L14 -290 L14 -282 L0 -272 L-14 -282 Z', '#E8E1D2');
   if (aL === 'down') up += arm([-52, -276], [-68, -226], [-70, -178], SL) + hand(-70, -168, skin, 90);
+  if (aL === 'counter') up += arm([-52, -276], [-76, -228], [-48, -194], SL) + hand(-42, -188, skin, 80);
   if (aR === 'point') up += arm([52, -276], [100, -236], [138, -258], SL) + pointHand(150, -260, skin, -8);
   else if (aR === 'raise') up += arm([52, -276], [104, -246], [104, -318], SL) + handOpen(104, -334, skin, 10 + (o.gA || 0), true);
   else if (aR === 'tap') up += arm([52, -276], [96, -228], [128, -196 + (o.tapY || 0)], SL) + hand(136, -192 + (o.tapY || 0), skin, -80, true);
   else if (aR === 'thumb') up += arm([52, -276], [106, -232], [98, -290], SL) + thumbUp(98, -298, skin, true);
   else if (aR === 'down') up += arm([52, -276], [68, -226], [70, -178], SL) + hand(70, -168, skin, 90, true);
+  else if (aR === 'counter') up += arm([52, -276], [76, -228], [48, -194], SL) + hand(42, -188, skin, 100, true);
+  else if (aR === 'phone') {
+    const py = o.phoneY ?? -320;
+    up += arm([52, -276], [106, -240], [102, py + 30], SL) + phone(102, py, 62, 112, o.phoneScreen, -6) + hand(102, py + 40, skin, -100, true);
+  }
   up += headWrap(R.daduHead({ expr: o.expr, mouth: o.mouth, look: o.look, blink: o.blink }), o.tilt || 0, -296);
   s += breathWrap(up, o.breath || 0);
   return s;

@@ -15,7 +15,7 @@ const prog = (t, a, b) => ease((t - a) / (b - a));
 const spring = x => x <= 0 ? 0 : 1 - Math.exp(-6 * x) * Math.cos(11 * x);
 
 // ---- who speaks when (measured from silence gaps in the supplied voice-over) ----
-const SPK = [[0, 5.79, 'nasima'], [5.79, 18.2, 'dadu'], [18.2, 29.64, 'rafi'], [29.64, 32.94, 'nasima'], [32.94, 40.12, 'dadu'], [40.12, 99, 'rafi']];
+const SPK = [[0, 5.79, 'dadu'], [5.79, 13.23, 'nasima'], [13.23, 18.2, 'dadu'], [18.2, 29.64, 'rafi'], [29.64, 32.94, 'dadu'], [32.94, 36.73, 'nasima'], [36.73, 40.12, 'dadu'], [40.12, 99, 'rafi']];
 const speaker = t => (SPK.find(s => t >= s[0] && t < s[1]) || [])[2];
 const envAt = t => ENV[clamp(Math.floor(t * FPS), 0, ENV.length - 1)];
 const envSmooth = t => { let s = 0; for (let k = -2; k <= 2; k++) s += envAt(t + k / FPS).l; return s / 5; };
@@ -55,7 +55,7 @@ const CS = 1.95;                      // adult scale
 const SHOP_G = 330, HOME_G = 560;     // ground lines
 const NAS_X = -200;
 
-function nas(t, o = {}) { const l = life('nasima', t, o.blinks); return C.nasima({ ...l, ...o, mouth: lip('nasima', t, o.rest || 'closed') }); }
+function nas(t, o = {}) { const l = life('nasima', t, o.blinks); return C.nasima({ ...l, ...o, tilt: l.tilt + (o.tiltAdd || 0), mouth: lip('nasima', t, o.rest || 'closed') }); }
 function dad(t, o = {}) { const l = life('dadu', t, o.blinks); return C.dadu({ ...l, ...o, tilt: l.tilt + (o.tiltAdd || 0), mouth: lip('dadu', t, o.rest || 'closed') }); }
 function raf(t, o = {}) { const l = life('rafi', t, o.blinks); return C.rafi({ ...l, ...o, tilt: l.tilt + (o.tiltAdd || 0), mouth: lip('rafi', t, o.rest || 'closed') }); }
 function gir(t, o = {}) { const l = life('girl', t); return C.girl({ ...l, ...o }); }
@@ -71,24 +71,24 @@ shot(0, 1.0, false, t => frame(camLerp({ x: 0, y: -150, z: 1.0 }, { x: 0, y: -23
 shot(1.0, 3.0, true, t => {
   const look = t < 1.6 ? [5, 1] : (t < 2.3 ? [0, 0] : [5, 1]);
   const gest = t > 1.9 && t < 2.9;
-  const ch = place(NAS_X, SHOP_G, CS, nas(t, { expr: 'annoyed', look, armL: 'counter', armR: gest ? 'gesture' : 'counter', gA: Math.sin(t * 9) * 6, rest: 'frown' }));
+  const ch = place(NAS_X, SHOP_G, CS, dad(t, { expr: 'annoyed', look, armL: 'counter', armR: gest ? 'raise' : 'counter', gA: Math.sin(t * 9) * 6, rest: 'frown' }));
   return frame(camLerp({ x: 80, y: -330, z: 1.25 }, { x: 85, y: -340, z: 1.32 }, prog(t, 1.0, 3.0)), S.shopInterior(t, { cctv: 'off' }), { behind: ch });
 });
 // S1c — close-up: sigh, "এখন কে বলবে কী হইছে?"
 shot(3.0, 5.79, false, t => {
   const sigh = t >= 3.0 && t < 3.95;
   const br = sigh ? -0.03 * Math.sin((t - 3.0) / 0.95 * Math.PI) : 0;
-  const ch = place(NAS_X, SHOP_G, CS, nas(t, { expr: sigh ? 'sad' : 'annoyed', look: t > 4.6 && t < 5.1 ? [5, 0] : [0, 0], armL: 'counter', armR: 'counter', rest: 'frown', breath: br, blinks: [3.95] }));
+  const ch = place(NAS_X, SHOP_G, CS, dad(t, { expr: sigh ? 'sad' : 'annoyed', look: t > 4.6 && t < 5.1 ? [5, 0] : [0, 0], armL: 'counter', armR: 'counter', rest: 'frown', breath: br, blinks: [3.95] }));
   return frame(camLerp({ x: -195, y: -420, z: 2.05 }, { x: -198, y: -430, z: 2.25 }, prog(t, 3.0, 5.79)), S.shopInterior(t, { cctv: 'off' }), { behind: ch });
 });
 // S2a — Dadu medium: "আর আমার জ্বালা শোনেন!"
 shot(5.79, 7.6, true, t => {
-  const ch = GIRL(t, { expr: 'sad', look: [5, 1] }) + place(-300, HOME_G, CS, dad(t, { expr: 'annoyed', armL: 'behind', armR: t > 6.4 ? 'raise' : 'behind', gA: Math.sin(t * 8) * 6, rest: 'frown' }));
+  const ch = GIRL(t, { expr: 'sad', look: [5, 1] }) + place(-300, HOME_G, CS, nas(t, { expr: 'annoyed', armL: 'hip', armR: t > 6.4 ? 'gesture' : 'down', gA: Math.sin(t * 8) * 6, rest: 'frown' }));
   return frame(camLerp({ x: -200, y: -260, z: 1.7 }, { x: -195, y: -270, z: 1.8 }, prog(t, 5.79, 7.6)), S.homeLiving(t, { router: 'bad', class: 'frozen' }), { behind: ch });
 });
 // S2b — wide: the online class is frozen ("মেয়ের অনলাইন ক্লাস চলে")
 shot(7.6, 9.6, false, t => {
-  const ch = GIRL(t, { expr: 'sad', look: [5, 1] }) + place(-300, HOME_G, CS, dad(t, { expr: 'annoyed', look: [5, 1], armL: 'behind', armR: t > 8.2 ? 'point' : 'behind', rest: 'frown' }));
+  const ch = GIRL(t, { expr: 'sad', look: [5, 1] }) + place(-300, HOME_G, CS, nas(t, { expr: 'annoyed', look: [5, 1], armL: 'hip', armR: t > 8.2 ? 'gesture' : 'down', gA: 20, rest: 'frown' }));
   return frame(camLerp({ x: 40, y: -170, z: 1.12 }, { x: 50, y: -180, z: 1.18 }, prog(t, 7.6, 9.6)), S.homeLiving(t, { router: 'bad', class: 'frozen' }), { behind: ch });
 });
 // S2c — insert: weak router + buffering laptop ("বাসার ওয়াইফাই খালি ঘোরে") ≤1.5s
@@ -99,7 +99,7 @@ shot(9.6, 11.05, false, t => {
 // S2d — close on Dadu: "স্যারের কথা আসে অর্ধেক!"
 shot(11.05, 13.23, false, t => {
   const shake = t > 12.3 && t < 13.0 ? Math.sin((t - 12.3) * 22) * 4 : 0;
-  const ch = place(-300, HOME_G, CS, dad(t, { expr: 'annoyed', armL: 'behind', armR: 'behind', tiltAdd: shake, rest: 'frown' }));
+  const ch = place(-300, HOME_G, CS, nas(t, { expr: 'annoyed', armL: 'hip', armR: 'down', tiltAdd: shake, rest: 'frown' }));
   return frame(camLerp({ x: -300, y: -190, z: 2.3 }, { x: -300, y: -200, z: 2.45 }, prog(t, 11.05, 13.23)), S.homeLiving(t, { router: 'bad', class: 'frozen' }), { behind: ch });
 });
 // S3a — insert: old PC crawling boot (≤1.5s)
@@ -153,7 +153,7 @@ shot(18.2, 22.2, true, t => {
 shot(22.2, 24.7, true, t => {
   const st = t < 23.6 ? 'off' : (t < 23.85 ? 'glitch' : 'live');
   const fixed = t > 23.95;
-  const ch = place(NAS_X, SHOP_G, CS, nas(t, { expr: fixed ? 'surprised' : 'thinking', look: [5, 1], armL: 'counter', armR: 'counter', rest: fixed ? 'o' : 'flat' })) +
+  const ch = place(NAS_X, SHOP_G, CS, dad(t, { expr: fixed ? 'surprised' : 'thinking', look: [5, 1], armL: 'counter', armR: 'counter', rest: fixed ? 'o' : 'flat' })) +
     place(110, SHOP_G, CS, raf(t, { expr: 'normal', look: t < 23.5 ? [0, 4] : [5, 1], armL: 'down', armR: 'tool', reachR: [24 + Math.sin(t * 10) * 3, -196], rest: 'smile' }));
   return frame(camLerp({ x: 50, y: -290, z: 1.2 }, { x: 55, y: -300, z: 1.26 }, prog(t, 22.2, 24.7)), S.shopInterior(t, { cctv: st, sparkAt: 23.45 }), { behind: ch });
 });
@@ -175,7 +175,7 @@ shot(25.95, 27.0, true, t => {
 // S5d — "সব ঠিক করি গুছিয়ে, বুঝিয়ে দিয়ে" — Rafi explains, Dadu nods, everything working
 shot(27.0, 29.64, true, t => {
   const nod = Math.sin(t * 6) * 3;
-  const behind = GIRL(t, { expr: 'happy', look: [5, 1] }) + place(-300, HOME_G, CS, dad(t, { expr: 'happy', look: [5, 0], armL: 'behind', armR: 'behind', tiltAdd: nod, rest: 'smile' }));
+  const behind = GIRL(t, { expr: 'happy', look: [5, 1] }) + place(-300, HOME_G, CS, nas(t, { expr: 'happy', look: [5, 0], armL: 'hip', armR: 'down', tiltAdd: nod, rest: 'smile' }));
   const front = place(200, 760, 2.05, raf(t, { expr: 'happy', look: [-5, 0], armL: 'down', armR: t > 27.6 ? 'present' : 'hip', rest: 'grin' }));
   return frame(camLerp({ x: -40, y: -170, z: 1.32 }, { x: -45, y: -175, z: 1.24 }, prog(t, 27.0, 29.64)), S.homeLiving(t, { router: 'ok', class: 'clear' }), { behind, front });
 });
@@ -190,14 +190,14 @@ shot(29.64, 32.94, true, t => {
   const surprised = t < 30.4;
   const up = prog(t, 30.6, 31.0);
   const armR = t > 30.6 ? 'phone' : 'counter';
-  const ch = place(NAS_X, SHOP_G, CS, nas(t, { expr: surprised ? 'surprised' : 'happy', look: t > 31.0 && t < 31.9 ? [5, -2] : [0, 0], armL: 'counter', armR, phoneY: lerp(-200, -330, up), phoneScreen: phoneLive(t), rest: surprised ? 'o' : 'grin', blinks: [30.4] }));
+  const ch = place(NAS_X, SHOP_G, CS, dad(t, { expr: surprised ? 'surprised' : 'happy', look: t > 31.0 && t < 31.9 ? [5, -2] : [0, 0], armL: 'counter', armR, phoneY: lerp(-200, -330, up), phoneScreen: phoneLive(t), rest: surprised ? 'o' : 'grin', blinks: [30.4] }));
   return frame(camLerp({ x: -150, y: -400, z: 1.75 }, { x: -146, y: -410, z: 1.85 }, prog(t, 29.64, 32.94)), S.shopInterior(t, { cctv: 'live' }), { behind: ch });
 });
 // S7 — Dadu relieved: "যাক বাবা! এখন মেয়ের ক্লাস একদম পরিষ্কার।" (gentle pull-out)
 shot(32.94, 36.73, true, t => {
   const relief = t < 33.6;
   const br = relief ? 0.03 * Math.sin((t - 32.94) / 0.66 * Math.PI) : 0;
-  const ch = GIRL(t, { expr: 'happy', look: [5, 1], typeY: Math.sin(t * 16) * 2 }) + place(-300, HOME_G, CS, dad(t, { expr: relief ? 'sad' : 'happy', look: t > 34.3 && t < 35.4 ? [5, 1] : [0, 0], armL: 'behind', armR: t > 35.2 ? 'thumb' : 'behind', breath: br, rest: 'smile' }));
+  const ch = GIRL(t, { expr: 'happy', look: [5, 1], typeY: Math.sin(t * 16) * 2 }) + place(-300, HOME_G, CS, nas(t, { expr: relief ? 'sad' : 'happy', look: t > 34.3 && t < 35.4 ? [5, 1] : [0, 0], armL: 'hip', armR: t > 35.2 ? 'gesture' : 'down', breath: br, rest: 'smile' }));
   let ov = '';
   for (let i = 0; i < 7; i++) { const yy = -600 + ((t * 40 + i * 140) % 900); ov += `<circle cx="${-400 + i * 140}" cy="${yy}" r="5" fill="#FFF3C4" opacity="0.6"/>`; }
   return frame(camLerp({ x: -60, y: -190, z: 1.4 }, { x: -55, y: -180, z: 1.26 }, prog(t, 32.94, 36.73)), S.homeLiving(t, { router: 'ok', class: 'clear' }), { behind: ch, front: ov });

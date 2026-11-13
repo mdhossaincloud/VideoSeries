@@ -190,7 +190,7 @@ function shopExterior(t) {
   let mid = '';
   // building + shop
   mid += rect(-430, -620, 860, 1100, '#5A4560');
-  mid += rect(-360, -470, 720, 170, PAL.mari, 14) + txt(0, -358, 'নাসিমা স্টোর', 96, INK);
+  mid += rect(-360, -470, 720, 170, PAL.mari, 14) + txt(0, -358, 'বিসমিল্লাহ স্টোর', 84, INK);
   mid += rect(-330, -250, 660, 690, '#E5CE9B');
   // interior hint
   [-110, 40, 190].forEach(y => { mid += rectF(-300, y, 600, 14, '#8A5A3C'); for (let x = -290; x < 290; x += 46) mid += rectF(x, y - 50 + ((x * 7) % 20), 34, 50 - ((x * 7) % 20), [PAL.red, PAL.teal, PAL.terra, '#3B6EA8'][Math.abs(x / 46 | 0) % 4]); });
