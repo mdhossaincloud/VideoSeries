@@ -1,0 +1,63 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // All business data for Dubai Gas & Rice lives under /businesses/{businessId}/...
+    // Access is granted to any user whose /users/{uid} doc inside that same business
+    // exists and has isActive == true. Role gating (OWNER vs STAFF) is additionally
+    // enforced in-app by RolePermissions; these rules only guard raw read/write.
+    match /businesses/{businessId} {
+
+      function isAuthed() {
+        return request.auth != null;
+      }
+
+      function myUserDoc() {
+        return get(/databases/$(database)/documents/businesses/$(businessId)/users/$(request.auth.uid));
+      }
+
+      function isActiveMember() {
+        return isAuthed() &&
+          exists(/databases/$(database)/documents/businesses/$(businessId)/users/$(request.auth.uid)) &&
+          myUserDoc().data.isActive == true;
+      }
+
+      function isOwner() {
+        return isActiveMember() && myUserDoc().data.role == 'OWNER';
+      }
+
+      // Users collection: anyone in the business can read the roster; only owners
+      // can create/modify users; any user can touch their own doc (profile edits).
+      match /users/{userId} {
+        allow read: if isActiveMember();
+        allow create, update: if isOwner() || request.auth.uid == userId;
+        allow delete: if false; // never hard-delete; deactivate instead
+      }
+
+      // All transactional ledgers: read/write for any active member. In-app code
+      // only writes through repositories, which enforce role rules (e.g. only
+      // owners can reverse transactions).
+      match /customers/{id}                 { allow read, write: if isActiveMember(); }
+      match /customer_transactions/{id}     { allow read, write: if isActiveMember(); }
+      match /suppliers/{id}                 { allow read, write: if isActiveMember(); }
+      match /supplier_transactions/{id}     { allow read, write: if isActiveMember(); }
+      match /rice_products/{id}             { allow read, write: if isActiveMember(); }
+      match /rice_stock_movements/{id}      { allow read, write: if isActiveMember(); }
+      match /cylinder_types/{id}            { allow read, write: if isActiveMember(); }
+      match /cylinder_transactions/{id}     { allow read, write: if isActiveMember(); }
+      match /expense_categories/{id}        { allow read, write: if isActiveMember(); }
+      match /expenses/{id}                  { allow read, write: if isActiveMember(); }
+      match /cash_ledger/{id}               { allow read, write: if isActiveMember(); }
+
+      // Audit log: everyone reads, only the server-side mirror of owner actions writes.
+      // Clients should never write directly; the app writes these alongside the
+      // underlying correction. Enforce that the actor matches the signed-in user.
+      match /audit_log/{id} {
+        allow read: if isActiveMember();
+        allow create: if isOwner() && request.resource.data.performedByUserId == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+  }
+}
