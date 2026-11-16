@@ -13,4 +13,5 @@ app/release/
 app/debug/
 app/schemas/
 .idea/
+.kotlin/
 *.hprof
