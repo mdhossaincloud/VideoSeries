@@ -138,10 +138,16 @@ private fun SellCylinderDialog(
                     }
                 }
                 Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AssistChip(onClick = { mode = true }, label = { Text("Exchange (empty for full)") },
-                        colors = if (mode) AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.primaryContainer) else AssistChipDefaults.assistChipColors())
-                    AssistChip(onClick = { mode = false }, label = { Text("New + deposit") },
-                        colors = if (!mode) AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.primaryContainer) else AssistChipDefaults.assistChipColors())
+                    AssistChip(
+                        onClick = { mode = true },
+                        label = { Text("Exchange", maxLines = 1, softWrap = false) },
+                        colors = if (mode) AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.primaryContainer) else AssistChipDefaults.assistChipColors()
+                    )
+                    AssistChip(
+                        onClick = { mode = false },
+                        label = { Text("New + Deposit", maxLines = 1, softWrap = false) },
+                        colors = if (!mode) AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.primaryContainer) else AssistChipDefaults.assistChipColors()
+                    )
                 }
                 Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(qty, { qty = it }, label = { Text("Qty") }, modifier = Modifier.weight(1f))

@@ -45,6 +45,8 @@ fun CylinderScreen(viewModel: CylinderViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsState()
     var showAddType by remember { mutableStateOf(false) }
     var actionTarget by remember { mutableStateOf<CylinderTypeInventory?>(null) }
+    var editTarget by remember { mutableStateOf<CylinderTypeInventory?>(null) }
+    var adjustTarget by remember { mutableStateOf<CylinderTypeInventory?>(null) }
 
     Scaffold(
         floatingActionButton = {
@@ -62,7 +64,12 @@ fun CylinderScreen(viewModel: CylinderViewModel = hiltViewModel()) {
             }
 
             items(state.inventory, key = { it.id }) { inv ->
-                CylinderTypeCard(inv, onAction = { actionTarget = inv })
+                CylinderTypeCard(
+                    inv,
+                    onAction = { actionTarget = inv },
+                    onEdit = { editTarget = inv },
+                    onAdjust = { adjustTarget = inv }
+                )
             }
 
             item { SectionHeader("কাস্টমারের কাছে বোতল (Customer Holdings)") }
@@ -87,9 +94,20 @@ fun CylinderScreen(viewModel: CylinderViewModel = hiltViewModel()) {
     }
 
     if (showAddType) {
-        AddCylinderTypeDialog(onDismiss = { showAddType = false }, onConfirm = { brand, size, material, pp, sp, dep ->
-            viewModel.addType(brand, size, material, pp, sp, dep)
+        AddCylinderTypeDialog(existing = null, onDismiss = { showAddType = false }, onConfirm = { brand, size, material, pp, sp, dep ->
+            viewModel.saveType(null, brand, size, material, pp, sp, dep)
             showAddType = false
+        })
+    }
+    editTarget?.let { inv ->
+        AddCylinderTypeDialog(existing = inv, onDismiss = { editTarget = null }, onConfirm = { brand, size, material, pp, sp, dep ->
+            viewModel.saveType(inv.id, brand, size, material, pp, sp, dep)
+            editTarget = null
+        })
+    }
+    adjustTarget?.let { inv ->
+        AdjustCylinderStockDialog(type = inv, onDismiss = { adjustTarget = null }, onConfirm = { full, empty, note ->
+            viewModel.adjustCylinderStock(inv, full, empty, note); adjustTarget = null
         })
     }
 
@@ -123,18 +141,22 @@ private fun typeOf(inv: CylinderTypeInventory) = com.fixibleit.onedesk.data.loca
 )
 
 @Composable
-private fun CylinderTypeCard(inv: CylinderTypeInventory, onAction: () -> Unit) {
+private fun CylinderTypeCard(inv: CylinderTypeInventory, onAction: () -> Unit, onEdit: () -> Unit, onAdjust: () -> Unit) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("${inv.brand} – ${inv.sizeLabel}", style = MaterialTheme.typography.titleMedium)
-                AssistChip(onClick = onAction, label = { Text("Record") })
+                Text("${inv.brand} – ${inv.sizeLabel}", style = MaterialTheme.typography.titleMedium, maxLines = 1, softWrap = false)
+                AssistChip(onClick = onAction, label = { Text("Record", maxLines = 1, softWrap = false) })
             }
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 InventoryStat("Full", "${inv.fullCount}")
                 InventoryStat("Empty", "${inv.emptyCount}")
-                InventoryStat("With customers", "${inv.customerHeldCount}")
-                InventoryStat("Deposits held", Money.format(inv.depositLiabilityBDT))
+                InventoryStat("W/ cust.", "${inv.customerHeldCount}")
+                InventoryStat("Deposit", Money.format(inv.depositLiabilityBDT))
+            }
+            Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.End) {
+                androidx.compose.material3.TextButton(onClick = onAdjust) { Text("Adjust Stock", maxLines = 1, softWrap = false) }
+                androidx.compose.material3.TextButton(onClick = onEdit) { Text("Edit", maxLines = 1, softWrap = false) }
             }
         }
     }
@@ -150,34 +172,94 @@ private fun InventoryStat(label: String, value: String) {
 
 @Composable
 private fun AddCylinderTypeDialog(
+    existing: CylinderTypeInventory?,
     onDismiss: () -> Unit,
     onConfirm: (String, String, CylinderMaterial, Double, Double, Double) -> Unit
 ) {
-    var brand by remember { mutableStateOf("") }
-    var size by remember { mutableStateOf("") }
-    var material by remember { mutableStateOf(CylinderMaterial.IRON) }
+    var brand by remember { mutableStateOf(existing?.brand.orEmpty()) }
+    var size by remember { mutableStateOf(existing?.sizeLabel.orEmpty()) }
+    var material by remember { mutableStateOf(existing?.material?.let { CylinderMaterial.valueOf(it) } ?: CylinderMaterial.IRON) }
     var purchasePrice by remember { mutableStateOf("") }
     var sellingPrice by remember { mutableStateOf("") }
     var deposit by remember { mutableStateOf("") }
 
+    val save = {
+        if (brand.isNotBlank() && size.isNotBlank()) {
+            onConfirm(brand.trim(), size.trim(), material,
+                purchasePrice.toDoubleOrNull() ?: 0.0,
+                sellingPrice.toDoubleOrNull() ?: 0.0,
+                deposit.toDoubleOrNull() ?: 0.0)
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add Cylinder Type") },
+        title = { Text(if (existing == null) "Add Cylinder Type" else "Edit Cylinder Type") },
         text = {
             Column {
-                OutlinedTextField(brand, { brand = it }, label = { Text("Brand (e.g. Bashundhara)") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(size, { size = it }, label = { Text("Size (e.g. 12kg)") }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                OutlinedTextField(brand, { brand = it }, label = { Text("Brand (e.g. Bashundhara)") },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                    modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(size, { size = it }, label = { Text("Size (e.g. 12kg)") },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
                 MaterialDropdown(material, { material = it })
-                OutlinedTextField(purchasePrice, { purchasePrice = it }, label = { Text("Purchase price (BDT)") }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
-                OutlinedTextField(sellingPrice, { sellingPrice = it }, label = { Text("Selling price (BDT)") }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
-                OutlinedTextField(deposit, { deposit = it }, label = { Text("Deposit per cylinder (BDT)") }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                OutlinedTextField(purchasePrice, { purchasePrice = it }, label = { Text("Purchase price (BDT)") },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                OutlinedTextField(sellingPrice, { sellingPrice = it }, label = { Text("Selling price (BDT)") },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                OutlinedTextField(deposit, { deposit = it }, label = { Text("Deposit per cylinder (BDT)") },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { save() }),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
             }
         },
-        confirmButton = {
-            TextButton(onClick = {
-                onConfirm(brand, size, material, purchasePrice.toDoubleOrNull() ?: 0.0, sellingPrice.toDoubleOrNull() ?: 0.0, deposit.toDoubleOrNull() ?: 0.0)
-            }) { Text("Save") }
+        confirmButton = { TextButton(onClick = save) { Text("Save") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+@Composable
+private fun AdjustCylinderStockDialog(type: CylinderTypeInventory, onDismiss: () -> Unit, onConfirm: (Int, Int, String) -> Unit) {
+    var newFull by remember { mutableStateOf(type.fullCount.toString()) }
+    var newEmpty by remember { mutableStateOf(type.emptyCount.toString()) }
+    var note by remember { mutableStateOf("") }
+
+    val save = {
+        val f = newFull.toIntOrNull() ?: 0
+        val e = newEmpty.toIntOrNull() ?: 0
+        if (f >= 0 && e >= 0) onConfirm(f, e, note)
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Adjust Stock — ${type.brand} ${type.sizeLabel}") },
+        text = {
+            Column {
+                Text("Current full: ${type.fullCount} • empty: ${type.emptyCount}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedTextField(newFull, { newFull = it }, label = { Text("New full count") },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                OutlinedTextField(newEmpty, { newEmpty = it }, label = { Text("New empty count") },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                OutlinedTextField(note, { note = it }, label = { Text("Reason (optional)") },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { save() }),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+            }
         },
+        confirmButton = { TextButton(onClick = save) { Text("Save") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
@@ -224,9 +306,26 @@ private fun CylinderActionDialog(
         title = { Text("${inventory.brand} ${inventory.sizeLabel}") },
         text = {
             Column {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("refill" to "Buy Refill", "exchange" to "Sell (Exchange)", "new" to "Sell (New)", "return" to "Return Empty").forEach { (key, label) ->
-                        AssistChip(onClick = { mode = key }, label = { Text(label, style = MaterialTheme.typography.labelSmall) })
+                // Two rows of two chips each so no label ever wraps.
+                val modes = listOf(
+                    "refill" to "Buy Refill",
+                    "exchange" to "Exchange",
+                    "new" to "New + Deposit",
+                    "return" to "Return Empty"
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    modes.chunked(2).forEach { pair ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            pair.forEach { (key, label) ->
+                                val selected = mode == key
+                                AssistChip(
+                                    onClick = { mode = key },
+                                    label = { Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false) },
+                                    colors = if (selected) androidx.compose.material3.AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.primaryContainer) else androidx.compose.material3.AssistChipDefaults.assistChipColors(),
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
                     }
                 }
                 OutlinedTextField(quantity, { quantity = it }, label = { Text("Quantity") }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))

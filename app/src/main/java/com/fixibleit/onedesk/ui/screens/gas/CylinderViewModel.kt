@@ -46,9 +46,27 @@ class CylinderViewModel @Inject constructor(
     val message: StateFlow<String?> = _message.asStateFlow()
     fun clearMessage() { _message.value = null }
 
-    fun addType(brand: String, size: String, material: CylinderMaterial, purchasePrice: Double, sellingPrice: Double, deposit: Double) {
+    fun saveType(existingId: String?, brand: String, size: String, material: CylinderMaterial, purchasePrice: Double, sellingPrice: Double, deposit: Double) {
         viewModelScope.launch {
-            cylinderRepository.addOrUpdateType(null, brand, size, material, purchasePrice, sellingPrice, deposit)
+            cylinderRepository.addOrUpdateType(existingId, brand, size, material, purchasePrice, sellingPrice, deposit)
+        }
+    }
+
+    /** Explicit full/empty count correction. */
+    fun adjustCylinderStock(type: com.fixibleit.onedesk.data.local.dao.CylinderTypeInventory, newFull: Int, newEmpty: Int, note: String) {
+        viewModelScope.launch {
+            val uid = authRepository.currentUserIdOrNull() ?: return@launch
+            val entity = com.fixibleit.onedesk.data.local.entity.CylinderTypeEntity(
+                id = type.id, brand = type.brand, sizeLabel = type.sizeLabel,
+                material = CylinderMaterial.valueOf(type.material),
+                purchasePriceBDT = 0.0, sellingPriceBDT = 0.0, depositAmountBDT = 0.0,
+                createdAt = 0L, updatedAt = 0L
+            )
+            val fullDelta = newFull - type.fullCount
+            val emptyDelta = newEmpty - type.emptyCount
+            if (fullDelta != 0 || emptyDelta != 0) {
+                cylinderRepository.recordStockAdjustment(entity, fullDelta, emptyDelta, note.ifBlank { "Manual adjustment" }, uid)
+            }
         }
     }
 

@@ -45,6 +45,8 @@ fun RiceScreen(viewModel: RiceViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsState()
     var showAddProduct by remember { mutableStateOf(false) }
     var actionTarget by remember { mutableStateOf<RiceProductStock?>(null) }
+    var editTarget by remember { mutableStateOf<RiceProductStock?>(null) }
+    var adjustTarget by remember { mutableStateOf<RiceProductStock?>(null) }
 
     Scaffold(
         floatingActionButton = {
@@ -60,14 +62,37 @@ fun RiceScreen(viewModel: RiceViewModel = hiltViewModel()) {
                 item { EmptyState("No rice products yet. Tap + to add your first product (e.g. Miniket, Nazirshail, BR28).") }
             }
             items(state.products, key = { it.id }) { product ->
-                RiceProductCard(product, onAction = { actionTarget = product })
+                RiceProductCard(
+                    product,
+                    onAction = { actionTarget = product },
+                    onEdit = { editTarget = product },
+                    onAdjust = { adjustTarget = product }
+                )
             }
         }
     }
 
     if (showAddProduct) {
-        AddRiceProductDialog(onDismiss = { showAddProduct = false }, onConfirm = { name, pp, sp, sack ->
-            viewModel.addProduct(name, pp, sp, sack); showAddProduct = false
+        AddRiceProductDialog(
+            existing = null,
+            onDismiss = { showAddProduct = false },
+            onConfirm = { name, pp, sp, sack ->
+                viewModel.saveProduct(null, name, pp, sp, sack); showAddProduct = false
+            }
+        )
+    }
+    editTarget?.let { product ->
+        AddRiceProductDialog(
+            existing = product,
+            onDismiss = { editTarget = null },
+            onConfirm = { name, pp, sp, sack ->
+                viewModel.saveProduct(product.id, name, pp, sp, sack); editTarget = null
+            }
+        )
+    }
+    adjustTarget?.let { product ->
+        AdjustStockDialog(product = product, onDismiss = { adjustTarget = null }, onConfirm = { newKg, note ->
+            viewModel.adjustStock(product, newKg, note); adjustTarget = null
         })
     }
 
@@ -88,12 +113,12 @@ fun RiceScreen(viewModel: RiceViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun RiceProductCard(product: RiceProductStock, onAction: () -> Unit) {
+private fun RiceProductCard(product: RiceProductStock, onAction: () -> Unit, onEdit: () -> Unit, onAdjust: () -> Unit) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(product.name, style = MaterialTheme.typography.titleMedium)
-                AssistChip(onClick = onAction, label = { Text("Buy / Sell") })
+                Text(product.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, softWrap = false)
+                AssistChip(onClick = onAction, label = { Text("Buy / Sell", maxLines = 1, softWrap = false) })
             }
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column {
@@ -109,36 +134,100 @@ private fun RiceProductCard(product: RiceProductStock, onAction: () -> Unit) {
                     Text("selling", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+            Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onAdjust) { Text("Adjust Stock", maxLines = 1, softWrap = false) }
+                TextButton(onClick = onEdit) { Text("Edit", maxLines = 1, softWrap = false) }
+            }
         }
     }
 }
 
 @Composable
-private fun AddRiceProductDialog(onDismiss: () -> Unit, onConfirm: (String, Double, Double, Double) -> Unit) {
-    var name by remember { mutableStateOf("") }
-    var purchasePrice by remember { mutableStateOf("") }
-    var sellingPrice by remember { mutableStateOf("") }
-    var kgPerSack by remember { mutableStateOf("50") }
+private fun AddRiceProductDialog(
+    existing: RiceProductStock?,
+    onDismiss: () -> Unit,
+    onConfirm: (String, Double, Double, Double) -> Unit
+) {
+    var name by remember { mutableStateOf(existing?.name.orEmpty()) }
+    var purchasePrice by remember { mutableStateOf(existing?.purchasePricePerKgBDT?.let { trimTrailingZero(it) }.orEmpty()) }
+    var sellingPrice by remember { mutableStateOf(existing?.sellingPricePerKgBDT?.let { trimTrailingZero(it) }.orEmpty()) }
+    var kgPerSack by remember { mutableStateOf(existing?.kgPerSack?.let { trimTrailingZero(it) } ?: "50") }
+
+    val save = {
+        if (name.isNotBlank()) {
+            onConfirm(name.trim(), purchasePrice.toDoubleOrNull() ?: 0.0, sellingPrice.toDoubleOrNull() ?: 0.0, kgPerSack.toDoubleOrNull() ?: 50.0)
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add Rice Product") },
+        title = { Text(if (existing == null) "Add Rice Product" else "Edit Rice Product") },
         text = {
             Column {
-                OutlinedTextField(name, { name = it }, label = { Text("Name (e.g. Miniket)") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(purchasePrice, { purchasePrice = it }, label = { Text("Purchase price / kg (BDT)") }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
-                OutlinedTextField(sellingPrice, { sellingPrice = it }, label = { Text("Selling price / kg (BDT)") }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
-                OutlinedTextField(kgPerSack, { kgPerSack = it }, label = { Text("Kg per sack/bag") }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                OutlinedTextField(name, { name = it }, label = { Text("Name (e.g. Miniket)") },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                    modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(purchasePrice, { purchasePrice = it }, label = { Text("Purchase price / kg (BDT)") },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                OutlinedTextField(sellingPrice, { sellingPrice = it }, label = { Text("Selling price / kg (BDT)") },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                OutlinedTextField(kgPerSack, { kgPerSack = it }, label = { Text("Kg per sack/bag") },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { save() }),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
             }
         },
-        confirmButton = {
-            TextButton(onClick = {
-                onConfirm(name, purchasePrice.toDoubleOrNull() ?: 0.0, sellingPrice.toDoubleOrNull() ?: 0.0, kgPerSack.toDoubleOrNull() ?: 50.0)
-            }) { Text("Save") }
-        },
+        confirmButton = { TextButton(onClick = save) { Text("Save") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
+
+@Composable
+private fun AdjustStockDialog(product: RiceProductStock, onDismiss: () -> Unit, onConfirm: (Double, String) -> Unit) {
+    var newKg by remember { mutableStateOf(trimTrailingZero(product.currentStockKg)) }
+    var note by remember { mutableStateOf("") }
+
+    val save = {
+        val v = newKg.toDoubleOrNull()
+        if (v != null && v >= 0.0) onConfirm(v, note)
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Adjust Stock — ${product.name}") },
+        text = {
+            Column {
+                Text("Current stock: ${Money.formatKg(product.currentStockKg)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedTextField(newKg, { newKg = it }, label = { Text("New stock (kg)") },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                OutlinedTextField(note, { note = it }, label = { Text("Reason (optional)") },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { save() }),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                Text(
+                    "An audited adjustment entry will be recorded for the difference, so history stays correct.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = save) { Text("Save") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+private fun trimTrailingZero(v: Double): String =
+    if (v == v.toLong().toDouble()) v.toLong().toString() else v.toString()
 
 @Composable
 private fun RiceActionDialog(

@@ -74,6 +74,31 @@ class AuthRepository @Inject constructor(
 
     /** Owner-only. Enforces the "up to four users" business rule before creating the Firebase
      * Auth account, so a failed limit check never leaves an orphaned auth user behind. */
+    /** Public self-service sign-up used from the Login screen. If the business has
+     *  no active user yet, the person signing up is the founding OWNER so the shop
+     *  can be set up with zero Firebase Console steps. Any subsequent self-signup is
+     *  refused - more staff must be added by the owner from Settings. */
+    suspend fun signUpFirstOwner(name: String, mobile: String, email: String, password: String): AuthOutcome {
+        if (userDao.activeUserCount() > 0) {
+            return AuthOutcome.Error("An owner already exists for this business. Ask the owner to add you from Settings → Users.")
+        }
+        return try {
+            val result = authDataSource.createAccount(email, password)
+            val now = DateUtil.now()
+            val user = UserEntity(
+                id = result.uid, name = name.ifBlank { email.substringBefore("@") }, mobile = mobile,
+                email = email, role = UserRole.OWNER, createdAt = now, updatedAt = now, syncStatus = SyncStatus.PENDING
+            )
+            userDao.upsert(user)
+            syncEnqueuer.enqueue("User", user.id, EntityMappers.toMap(user), SyncOperation.CREATE)
+            auditLogger.log("User", user.id, "SIGNUP_FOUNDING_OWNER", user.id, null, EntityMappers.toMap(user).toString())
+            settingsRepository.setSessionUserId(user.id)
+            AuthOutcome.Success(user)
+        } catch (t: Throwable) {
+            AuthOutcome.Error(t.message ?: "Could not create the account.")
+        }
+    }
+
     suspend fun createStaffOrOwnerAccount(
         name: String,
         mobile: String,

@@ -17,9 +17,9 @@ import com.fixibleit.onedesk.ui.theme.DangerRed
 @Composable
 fun SyncStatusBadge(pendingCount: Int, failedCount: Int, modifier: Modifier = Modifier) {
     val (label, color) = when {
-        failedCount > 0 -> "$failedCount sync issue(s)" to DangerRed
-        pendingCount > 0 -> "Syncing $pendingCount..." to WarningAmber
-        else -> "All synced" to SuccessGreen
+        failedCount > 0 -> "$failedCount could not sync — will retry" to DangerRed
+        pendingCount > 0 -> "Syncing…" to WarningAmber
+        else -> "All data synced • up to date" to SuccessGreen
     }
     Surface(
         modifier = modifier,

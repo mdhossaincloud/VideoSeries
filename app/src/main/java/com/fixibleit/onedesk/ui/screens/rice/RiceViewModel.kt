@@ -39,8 +39,19 @@ class RiceViewModel @Inject constructor(
     ) { products, customers, suppliers -> RiceUiState(products, customers, suppliers) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, RiceUiState())
 
-    fun addProduct(name: String, purchasePrice: Double, sellingPrice: Double, kgPerSack: Double) {
-        viewModelScope.launch { riceRepository.addOrUpdateProduct(null, name, purchasePrice, sellingPrice, kgPerSack) }
+    /** Add a brand-new product, OR update an existing one in place (same id -> Room REPLACE). */
+    fun saveProduct(existingId: String?, name: String, purchasePrice: Double, sellingPrice: Double, kgPerSack: Double) {
+        viewModelScope.launch { riceRepository.addOrUpdateProduct(existingId, name, purchasePrice, sellingPrice, kgPerSack) }
+    }
+
+    /** Explicit stock correction. Posts a signed quantityKgDelta that the stock SUM() picks up. */
+    fun adjustStock(product: RiceProductStock, newStockKg: Double, note: String) {
+        viewModelScope.launch {
+            val uid = authRepository.currentUserIdOrNull() ?: return@launch
+            val delta = newStockKg - product.currentStockKg
+            if (delta == 0.0) return@launch
+            riceRepository.recordStockAdjustment(toEntity(product), delta, note.ifBlank { "Manual adjustment" }, uid)
+        }
     }
 
     fun recordSale(product: RiceProductStock, quantityKg: Double, unitPrice: Double, paidCash: Double, due: Double, customer: CustomerEntity?) {
