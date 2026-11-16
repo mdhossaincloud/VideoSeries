@@ -65,6 +65,14 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel(), onManageUsers
         if (state.canManageUsers) {
             SettingsCard("Users") {
                 Text("${state.users.size} of 4 users", style = MaterialTheme.typography.bodyMedium)
+                if (state.pendingRequests.isNotEmpty()) {
+                    Text(
+                        "${state.pendingRequests.size} pending request${if (state.pendingRequests.size == 1) "" else "s"}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = com.fixibleit.onedesk.ui.theme.GoldDeep,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
                 TextButton(onClick = onManageUsers, modifier = Modifier.padding(top = 4.dp)) { Text("Manage Users") }
             }
         }

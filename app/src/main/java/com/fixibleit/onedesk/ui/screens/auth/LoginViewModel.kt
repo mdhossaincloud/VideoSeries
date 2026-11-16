@@ -52,7 +52,7 @@ class LoginViewModel @Inject constructor(
             val outcome = if (state.mode == AuthMode.SIGN_IN) {
                 authRepository.signIn(state.email.trim(), state.password)
             } else {
-                authRepository.signUpFirstOwner(state.name.trim(), state.mobile.trim(), state.email.trim(), state.password)
+                authRepository.signUpOrRequestAccess(state.name.trim(), state.mobile.trim(), state.email.trim(), state.password)
             }
             when (outcome) {
                 is AuthOutcome.Success -> {

@@ -14,6 +14,9 @@ data class UserEntity(
     val email: String,
     val role: UserRole,
     val isActive: Boolean = true,
+    // true means the admin declined this account request; it lives on so declined users
+    // don't silently reappear in the pending list after sync.
+    val isDeclined: Boolean = false,
     val createdAt: Long,
     val updatedAt: Long,
     val syncStatus: SyncStatus = SyncStatus.PENDING

@@ -113,9 +113,9 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel(), onLoggedIn: () -> U
 
             Text(
                 if (isSignUp)
-                    "Create Account works only for the first (founding) owner. Staff users are added later from Settings → Users."
+                    "First sign-up becomes the shop owner. After that, Create Account sends a request that the owner Accepts or Declines from Settings → Manage Users."
                 else
-                    "New shop? Tap \"Create Account\" to set up as the founding owner.",
+                    "New here? Tap Create Account to sign up — the owner will approve your access.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 16.dp)

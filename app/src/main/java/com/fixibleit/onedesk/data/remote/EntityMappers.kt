@@ -31,12 +31,14 @@ object EntityMappers {
 
     fun toMap(e: UserEntity): Map<String, Any?> = mapOf(
         "id" to e.id, "name" to e.name, "mobile" to e.mobile, "email" to e.email,
-        "role" to e.role.name, "isActive" to e.isActive, "createdAt" to e.createdAt, "updatedAt" to e.updatedAt
+        "role" to e.role.name, "isActive" to e.isActive, "isDeclined" to e.isDeclined,
+        "createdAt" to e.createdAt, "updatedAt" to e.updatedAt
     )
 
     fun userFromMap(m: Map<String, Any?>): UserEntity = UserEntity(
         id = m.str("id"), name = m.str("name"), mobile = m.str("mobile"), email = m.str("email"),
         role = UserRole.valueOf(m.str("role")), isActive = m.bool("isActive"),
+        isDeclined = m.bool("isDeclined"),
         createdAt = m.long("createdAt"), updatedAt = m.long("updatedAt"), syncStatus = SyncStatus.SYNCED
     )
 

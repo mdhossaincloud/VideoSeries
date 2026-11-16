@@ -19,8 +19,14 @@ interface UserDao {
     @Query("SELECT * FROM users WHERE isActive = 1 ORDER BY createdAt ASC")
     fun observeActiveUsers(): Flow<List<UserEntity>>
 
+    @Query("SELECT * FROM users WHERE isActive = 0 AND isDeclined = 0 ORDER BY createdAt ASC")
+    fun observePendingRequests(): Flow<List<UserEntity>>
+
     @Query("SELECT COUNT(*) FROM users WHERE isActive = 1")
     suspend fun activeUserCount(): Int
+
+    @Query("SELECT COUNT(*) FROM users")
+    suspend fun totalUserCount(): Int
 
     @Query("SELECT * FROM users WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): UserEntity?

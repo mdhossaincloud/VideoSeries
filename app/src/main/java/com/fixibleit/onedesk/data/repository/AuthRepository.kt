@@ -45,21 +45,32 @@ class AuthRepository @Inject constructor(
         val user = if (local != null) {
             local
         } else {
-            // First time this device sees this user. If no active user exists in this
-            // business yet, this one is the founding OWNER so the shop can be set up
-            // without anyone having to hand-edit Firestore. Everyone created after that
-            // from Settings -> Users starts as the role the owner picked.
-            val isFirstUser = userDao.activeUserCount() == 0
-            val now = DateUtil.now()
-            val newUser = UserEntity(
-                id = result.uid, name = result.email.substringBefore("@"), mobile = "",
-                email = result.email,
-                role = if (isFirstUser) UserRole.OWNER else UserRole.STAFF,
-                createdAt = now, updatedAt = now, syncStatus = SyncStatus.PENDING
-            )
-            userDao.upsert(newUser)
-            syncEnqueuer.enqueue("User", newUser.id, EntityMappers.toMap(newUser), SyncOperation.CREATE)
-            newUser
+            // First time this device has seen this account. If nobody at all has
+            // signed up yet, this is the founding OWNER (bootstrap). Otherwise the
+            // user has to go through the Create Account request flow - refuse here
+            // so a stranger with only a Firebase Auth account can't walk in.
+            if (userDao.totalUserCount() == 0) {
+                val now = DateUtil.now()
+                val newUser = UserEntity(
+                    id = result.uid, name = result.email.substringBefore("@"), mobile = "",
+                    email = result.email, role = UserRole.OWNER, isActive = true, isDeclined = false,
+                    createdAt = now, updatedAt = now, syncStatus = SyncStatus.PENDING
+                )
+                userDao.upsert(newUser)
+                syncEnqueuer.enqueue("User", newUser.id, EntityMappers.toMap(newUser), SyncOperation.CREATE)
+                newUser
+            } else {
+                authDataSource.signOut()
+                return@try AuthOutcome.Error("Account not recognised on this business. Please tap Create Account to request access.")
+            }
+        }
+        if (user.isDeclined) {
+            authDataSource.signOut()
+            return@try AuthOutcome.Error("Your access request was declined by the owner.")
+        }
+        if (!user.isActive) {
+            authDataSource.signOut()
+            return@try AuthOutcome.Error("Your account is awaiting admin approval.")
         }
         settingsRepository.setSessionUserId(user.id)
         AuthOutcome.Success(user)
@@ -74,30 +85,67 @@ class AuthRepository @Inject constructor(
 
     /** Owner-only. Enforces the "up to four users" business rule before creating the Firebase
      * Auth account, so a failed limit check never leaves an orphaned auth user behind. */
-    /** Public self-service sign-up used from the Login screen. If the business has
-     *  no active user yet, the person signing up is the founding OWNER so the shop
-     *  can be set up with zero Firebase Console steps. Any subsequent self-signup is
-     *  refused - more staff must be added by the owner from Settings. */
-    suspend fun signUpFirstOwner(name: String, mobile: String, email: String, password: String): AuthOutcome {
-        if (userDao.activeUserCount() > 0) {
-            return AuthOutcome.Error("An owner already exists for this business. Ask the owner to add you from Settings → Users.")
-        }
+    /**
+     * Self-service sign-up from the Login screen. Two paths:
+     *
+     * 1. First-ever user for this business (no local users at all) → signed up as
+     *    the founding OWNER and logged in immediately. This is the only way to
+     *    bootstrap the shop without a Firebase Console detour.
+     *
+     * 2. Business already has users → the Firebase Auth account is created, but the
+     *    Room/Firestore user doc is stored as isActive=false. The user is signed
+     *    out immediately and shown "Awaiting admin approval". The owner sees the
+     *    request under Settings → Manage Users → Pending Requests with
+     *    Accept / Decline buttons.
+     */
+    suspend fun signUpOrRequestAccess(name: String, mobile: String, email: String, password: String): AuthOutcome {
+        val isFoundingOwner = userDao.totalUserCount() == 0
         return try {
             val result = authDataSource.createAccount(email, password)
             val now = DateUtil.now()
             val user = UserEntity(
-                id = result.uid, name = name.ifBlank { email.substringBefore("@") }, mobile = mobile,
-                email = email, role = UserRole.OWNER, createdAt = now, updatedAt = now, syncStatus = SyncStatus.PENDING
+                id = result.uid,
+                name = name.ifBlank { email.substringBefore("@") }, mobile = mobile, email = email,
+                role = if (isFoundingOwner) UserRole.OWNER else UserRole.STAFF,
+                isActive = isFoundingOwner,
+                isDeclined = false,
+                createdAt = now, updatedAt = now, syncStatus = SyncStatus.PENDING
             )
             userDao.upsert(user)
             syncEnqueuer.enqueue("User", user.id, EntityMappers.toMap(user), SyncOperation.CREATE)
-            auditLogger.log("User", user.id, "SIGNUP_FOUNDING_OWNER", user.id, null, EntityMappers.toMap(user).toString())
-            settingsRepository.setSessionUserId(user.id)
-            AuthOutcome.Success(user)
+            if (isFoundingOwner) {
+                auditLogger.log("User", user.id, "SIGNUP_FOUNDING_OWNER", user.id, null, EntityMappers.toMap(user).toString())
+                settingsRepository.setSessionUserId(user.id)
+                AuthOutcome.Success(user)
+            } else {
+                auditLogger.log("User", user.id, "ACCESS_REQUESTED", user.id, null, EntityMappers.toMap(user).toString())
+                // Firebase Auth signs the new user in automatically; sign out so they
+                // can't use the app until the owner accepts the request.
+                authDataSource.signOut()
+                AuthOutcome.Error("Account request sent. The owner will review it from Settings → Manage Users.")
+            }
         } catch (t: Throwable) {
             AuthOutcome.Error(t.message ?: "Could not create the account.")
         }
     }
+
+    /** Owner-only: approve a pending request. Sets isActive=true + syncs to Firestore. */
+    suspend fun approveAccessRequest(user: UserEntity, approvedByUserId: String) {
+        val updated = user.copy(isActive = true, isDeclined = false, updatedAt = DateUtil.now(), syncStatus = SyncStatus.PENDING)
+        userDao.update(updated)
+        syncEnqueuer.enqueue("User", updated.id, EntityMappers.toMap(updated), SyncOperation.UPDATE)
+        auditLogger.log("User", updated.id, "APPROVE", approvedByUserId, EntityMappers.toMap(user).toString(), EntityMappers.toMap(updated).toString())
+    }
+
+    /** Owner-only: permanently dismiss a pending request. The user can never log in. */
+    suspend fun declineAccessRequest(user: UserEntity, declinedByUserId: String) {
+        val updated = user.copy(isActive = false, isDeclined = true, updatedAt = DateUtil.now(), syncStatus = SyncStatus.PENDING)
+        userDao.update(updated)
+        syncEnqueuer.enqueue("User", updated.id, EntityMappers.toMap(updated), SyncOperation.UPDATE)
+        auditLogger.log("User", updated.id, "DECLINE", declinedByUserId, EntityMappers.toMap(user).toString(), EntityMappers.toMap(updated).toString())
+    }
+
+    fun observePendingRequests() = userDao.observePendingRequests()
 
     suspend fun createStaffOrOwnerAccount(
         name: String,

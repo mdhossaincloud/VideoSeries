@@ -27,6 +27,7 @@ data class SettingsUiState(
     val pendingSyncCount: Int = 0,
     val failedSyncCount: Int = 0,
     val users: List<UserEntity> = emptyList(),
+    val pendingRequests: List<UserEntity> = emptyList(),
     val canManageUsers: Boolean = false,
     val canManageSync: Boolean = false,
     val backupMessage: String? = null,
@@ -56,7 +57,8 @@ class SettingsViewModel @Inject constructor(
             users = users, canManageUsers = user?.let { RolePermissions.canManageUsers(it.role) } ?: false,
             canManageSync = user?.let { RolePermissions.canManageSyncAndBackup(it.role) } ?: false
         )
-    }.combine(_backupMessage) { s, msg -> s.copy(backupMessage = msg) }
+    }.combine(authRepository.observePendingRequests()) { s, req -> s.copy(pendingRequests = req) }
+        .combine(_backupMessage) { s, msg -> s.copy(backupMessage = msg) }
         .combine(_restoreStaged) { s, staged -> s.copy(restoreStaged = staged) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, SettingsUiState())
 
@@ -82,6 +84,22 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val performedBy = authRepository.currentUserIdOrNull() ?: return@launch
             authRepository.deactivateUser(user, performedBy)
+        }
+    }
+
+    fun approveRequest(user: UserEntity) {
+        viewModelScope.launch {
+            val performedBy = authRepository.currentUserIdOrNull() ?: return@launch
+            authRepository.approveAccessRequest(user, performedBy)
+            _backupMessage.value = "Approved: ${user.name}"
+        }
+    }
+
+    fun declineRequest(user: UserEntity) {
+        viewModelScope.launch {
+            val performedBy = authRepository.currentUserIdOrNull() ?: return@launch
+            authRepository.declineAccessRequest(user, performedBy)
+            _backupMessage.value = "Declined: ${user.name}"
         }
     }
 

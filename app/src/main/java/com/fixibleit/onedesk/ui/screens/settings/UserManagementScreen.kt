@@ -51,6 +51,24 @@ fun UserManagementScreen(viewModel: SettingsViewModel = hiltViewModel()) {
         }
     ) { padding ->
         LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding() + 16.dp, bottom = 88.dp)) {
+            if (state.pendingRequests.isNotEmpty()) {
+                item { SectionHeader("Pending Requests (${state.pendingRequests.size})") }
+                items(state.pendingRequests, key = { "pending-${it.id}" }) { req ->
+                    Card(Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
+                        Column(Modifier.padding(14.dp)) {
+                            Text(req.name.ifBlank { req.email.substringBefore("@") }, style = MaterialTheme.typography.titleSmall)
+                            Text(req.email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (req.mobile.isNotBlank()) {
+                                Text(req.mobile, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.End) {
+                                TextButton(onClick = { viewModel.declineRequest(req) }) { Text("Decline", maxLines = 1, softWrap = false) }
+                                TextButton(onClick = { viewModel.approveRequest(req) }) { Text("Accept", maxLines = 1, softWrap = false) }
+                            }
+                        }
+                    }
+                }
+            }
             item { SectionHeader("Users (${state.users.size}/$MAX_USERS_PER_BUSINESS)") }
             items(state.users, key = { it.id }) { user ->
                 // Protect every OWNER from removal (the founding owner must never be
