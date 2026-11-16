@@ -42,11 +42,25 @@ class AuthRepository @Inject constructor(
     suspend fun signIn(email: String, password: String): AuthOutcome = try {
         val result = authDataSource.signIn(email, password)
         val local = userDao.getByEmail(result.email) ?: userDao.getById(result.uid)
-        val user = local ?: UserEntity(
-            id = result.uid, name = result.email.substringBefore("@"), mobile = "",
-            email = result.email, role = UserRole.STAFF, createdAt = DateUtil.now(), updatedAt = DateUtil.now(),
-            syncStatus = SyncStatus.SYNCED
-        ).also { userDao.upsert(it) }
+        val user = if (local != null) {
+            local
+        } else {
+            // First time this device sees this user. If no active user exists in this
+            // business yet, this one is the founding OWNER so the shop can be set up
+            // without anyone having to hand-edit Firestore. Everyone created after that
+            // from Settings -> Users starts as the role the owner picked.
+            val isFirstUser = userDao.activeUserCount() == 0
+            val now = DateUtil.now()
+            val newUser = UserEntity(
+                id = result.uid, name = result.email.substringBefore("@"), mobile = "",
+                email = result.email,
+                role = if (isFirstUser) UserRole.OWNER else UserRole.STAFF,
+                createdAt = now, updatedAt = now, syncStatus = SyncStatus.PENDING
+            )
+            userDao.upsert(newUser)
+            syncEnqueuer.enqueue("User", newUser.id, EntityMappers.toMap(newUser), SyncOperation.CREATE)
+            newUser
+        }
         settingsRepository.setSessionUserId(user.id)
         AuthOutcome.Success(user)
     } catch (t: Throwable) {
