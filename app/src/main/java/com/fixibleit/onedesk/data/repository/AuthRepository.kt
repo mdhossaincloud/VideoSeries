@@ -39,43 +39,47 @@ class AuthRepository @Inject constructor(
      * collecting the whole currentUser Flow at every call site. */
     suspend fun currentUserIdOrNull(): String? = currentUser.first()?.id
 
-    suspend fun signIn(email: String, password: String): AuthOutcome = try {
-        val result = authDataSource.signIn(email, password)
-        val local = userDao.getByEmail(result.email) ?: userDao.getById(result.uid)
-        val user = if (local != null) {
-            local
-        } else {
-            // First time this device has seen this account. If nobody at all has
-            // signed up yet, this is the founding OWNER (bootstrap). Otherwise the
-            // user has to go through the Create Account request flow - refuse here
-            // so a stranger with only a Firebase Auth account can't walk in.
-            if (userDao.totalUserCount() == 0) {
-                val now = DateUtil.now()
-                val newUser = UserEntity(
-                    id = result.uid, name = result.email.substringBefore("@"), mobile = "",
-                    email = result.email, role = UserRole.OWNER, isActive = true, isDeclined = false,
-                    createdAt = now, updatedAt = now, syncStatus = SyncStatus.PENDING
-                )
-                userDao.upsert(newUser)
-                syncEnqueuer.enqueue("User", newUser.id, EntityMappers.toMap(newUser), SyncOperation.CREATE)
-                newUser
-            } else {
-                authDataSource.signOut()
-                return@try AuthOutcome.Error("Account not recognised on this business. Please tap Create Account to request access.")
+    suspend fun signIn(email: String, password: String): AuthOutcome {
+        return try {
+            val result = authDataSource.signIn(email, password)
+            val local = userDao.getByEmail(result.email) ?: userDao.getById(result.uid)
+            val user = local ?: run {
+                // First time this device has seen this account. If nobody at all has
+                // signed up yet, this is the founding OWNER (bootstrap). Otherwise the
+                // user has to go through the Create Account request flow - refuse here
+                // so a stranger with only a Firebase Auth account can't walk in.
+                if (userDao.totalUserCount() == 0) {
+                    val now = DateUtil.now()
+                    val newUser = UserEntity(
+                        id = result.uid, name = result.email.substringBefore("@"), mobile = "",
+                        email = result.email, role = UserRole.OWNER, isActive = true, isDeclined = false,
+                        createdAt = now, updatedAt = now, syncStatus = SyncStatus.PENDING
+                    )
+                    userDao.upsert(newUser)
+                    syncEnqueuer.enqueue("User", newUser.id, EntityMappers.toMap(newUser), SyncOperation.CREATE)
+                    newUser
+                } else {
+                    authDataSource.signOut()
+                    return AuthOutcome.Error("Account not recognised on this business. Please tap Create Account to request access.")
+                }
             }
+            when {
+                user.isDeclined -> {
+                    authDataSource.signOut()
+                    AuthOutcome.Error("Your access request was declined by the owner.")
+                }
+                !user.isActive -> {
+                    authDataSource.signOut()
+                    AuthOutcome.Error("Your account is awaiting admin approval.")
+                }
+                else -> {
+                    settingsRepository.setSessionUserId(user.id)
+                    AuthOutcome.Success(user)
+                }
+            }
+        } catch (t: Throwable) {
+            AuthOutcome.Error(t.message ?: "Sign-in failed. Please check your connection and try again.")
         }
-        if (user.isDeclined) {
-            authDataSource.signOut()
-            return@try AuthOutcome.Error("Your access request was declined by the owner.")
-        }
-        if (!user.isActive) {
-            authDataSource.signOut()
-            return@try AuthOutcome.Error("Your account is awaiting admin approval.")
-        }
-        settingsRepository.setSessionUserId(user.id)
-        AuthOutcome.Success(user)
-    } catch (t: Throwable) {
-        AuthOutcome.Error(t.message ?: "Sign-in failed. Please check your connection and try again.")
     }
 
     suspend fun signOut() {
