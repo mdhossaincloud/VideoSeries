@@ -14,7 +14,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -184,15 +183,15 @@ private fun RiceActionDialog(
 
                 ExposedDropdownMenuBox(expanded = partyExpanded, onExpandedChange = { partyExpanded = it }, modifier = Modifier.padding(top = 8.dp)) {
                     OutlinedTextField(
-                        value = if (isSale) (selectedCustomer?.name ?: "Walk-in (no customer)") else (selectedSupplier?.name ?: "Cash purchase (no supplier)"),
+                        value = if (isSale) (selectedCustomer?.name ?: "Walk-in (cash sale)") else (selectedSupplier?.name ?: "Cash purchase (no supplier)"),
                         onValueChange = {}, readOnly = true,
                         label = { Text(if (isSale) "Customer" else "Supplier") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = partyExpanded) },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().menuAnchor()
                     )
-                    DropdownMenu(expanded = partyExpanded, onDismissRequest = { partyExpanded = false }) {
+                    ExposedDropdownMenu(expanded = partyExpanded, onDismissRequest = { partyExpanded = false }) {
                         if (isSale) {
-                            DropdownMenuItem(text = { Text("Walk-in (no customer)") }, onClick = { selectedCustomer = null; partyExpanded = false })
+                            DropdownMenuItem(text = { Text("Walk-in (cash sale)") }, onClick = { selectedCustomer = null; partyExpanded = false })
                             customers.forEach { c -> DropdownMenuItem(text = { Text(c.name) }, onClick = { selectedCustomer = c; partyExpanded = false }) }
                         } else {
                             DropdownMenuItem(text = { Text("Cash purchase (no supplier)") }, onClick = { selectedSupplier = null; partyExpanded = false })

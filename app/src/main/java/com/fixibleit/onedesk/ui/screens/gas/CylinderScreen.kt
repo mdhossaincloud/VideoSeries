@@ -14,7 +14,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -191,9 +190,9 @@ private fun MaterialDropdown(selected: CylinderMaterial, onSelected: (CylinderMa
             value = selected.name, onValueChange = {}, readOnly = true,
             label = { Text("Material") },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().menuAnchor()
         )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             CylinderMaterial.entries.forEach {
                 DropdownMenuItem(text = { Text(it.name) }, onClick = { onSelected(it); expanded = false })
             }
@@ -243,13 +242,13 @@ private fun CylinderActionDialog(
                 if (mode != "refill") {
                     ExposedDropdownMenuBox(expanded = customerExpanded, onExpandedChange = { customerExpanded = it }, modifier = Modifier.padding(top = 8.dp)) {
                         OutlinedTextField(
-                            value = selectedCustomer?.name ?: "Walk-in (no customer)", onValueChange = {}, readOnly = true,
+                            value = selectedCustomer?.name ?: "Walk-in (cash sale)", onValueChange = {}, readOnly = true,
                             label = { Text("Customer") },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = customerExpanded) },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth().menuAnchor()
                         )
-                        DropdownMenu(expanded = customerExpanded, onDismissRequest = { customerExpanded = false }) {
-                            DropdownMenuItem(text = { Text("Walk-in (no customer)") }, onClick = { selectedCustomer = null; customerExpanded = false })
+                        ExposedDropdownMenu(expanded = customerExpanded, onDismissRequest = { customerExpanded = false }) {
+                            DropdownMenuItem(text = { Text("Walk-in (cash sale)") }, onClick = { selectedCustomer = null; customerExpanded = false })
                             customers.forEach { c ->
                                 DropdownMenuItem(text = { Text(c.name) }, onClick = { selectedCustomer = c; customerExpanded = false })
                             }
