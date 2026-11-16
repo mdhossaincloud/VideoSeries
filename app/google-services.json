@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "000000000000",
-    "project_id": "onedesk-business-v2-placeholder",
-    "storage_bucket": "onedesk-business-v2-placeholder.appspot.com"
+    "project_number": "156923696651",
+    "project_id": "onedesk-business-63efc",
+    "storage_bucket": "onedesk-business-63efc.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000",
+        "mobilesdk_app_id": "1:156923696651:android:45f144caabd201c3c3590e",
         "android_client_info": {
           "package_name": "com.fixibleit.onedesk"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "REPLACE_WITH_REAL_KEY"
+          "current_key": "AIzaSyC9bwKFHkwzULiIO48M8UEwhyGiTSgsxSA"
         }
       ],
       "services": {
@@ -26,7 +26,7 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:1111111111111111",
+        "mobilesdk_app_id": "1:156923696651:android:dce56a4611dc190cc3590e",
         "android_client_info": {
           "package_name": "com.fixibleit.onedesk.debug"
         }
@@ -34,7 +34,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "REPLACE_WITH_REAL_KEY"
+          "current_key": "AIzaSyC9bwKFHkwzULiIO48M8UEwhyGiTSgsxSA"
         }
       ],
       "services": {
